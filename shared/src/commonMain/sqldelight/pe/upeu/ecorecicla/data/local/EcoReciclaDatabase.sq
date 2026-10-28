@@ -1,0 +1,126 @@
+CREATE TABLE punto_acopio (
+    id INTEGER PRIMARY KEY NOT NULL,
+    razon_social TEXT NOT NULL,
+    direccion TEXT NOT NULL,
+    zona TEXT NOT NULL,
+    material_habitual TEXT NOT NULL,
+    secuencia INTEGER NOT NULL DEFAULT 0,
+    atendido INTEGER NOT NULL DEFAULT 0,
+    ruta_id INTEGER,
+    usuario TEXT NOT NULL
+);
+
+CREATE TABLE pesaje (
+    id INTEGER PRIMARY KEY NOT NULL,
+    punto_id INTEGER NOT NULL,
+    fecha_hora TEXT NOT NULL,
+    material TEXT NOT NULL,
+    peso_bruto REAL NOT NULL,
+    tara REAL NOT NULL,
+    peso_neto REAL NOT NULL,
+    operario TEXT NOT NULL,
+    estado_tipo TEXT NOT NULL DEFAULT 'REGISTRADO',
+    motivo_anulacion TEXT,
+    pendiente INTEGER NOT NULL DEFAULT 0,
+    client_operation_id TEXT,
+    ruta_id INTEGER,
+    usuario_sesion TEXT NOT NULL
+);
+
+CREATE TABLE metadatos_sincronizacion (
+    clave TEXT PRIMARY KEY NOT NULL,
+    valor TEXT NOT NULL
+);
+
+-- Consultas de Puntos de Acopio
+obtenerPuntosDeRuta:
+SELECT * FROM punto_acopio
+WHERE usuario = :usuario
+ORDER BY secuencia ASC;
+
+insertarOReemplazarPunto:
+INSERT OR REPLACE INTO punto_acopio (
+    id, razon_social, direccion, zona, material_habitual, secuencia, atendido, ruta_id, usuario
+) VALUES (
+    :id, :razonSocial, :direccion, :zona, :materialHabitual, :secuencia, :atendido, :rutaId, :usuario
+);
+
+marcarPuntoAtendido:
+UPDATE punto_acopio
+SET atendido = 1
+WHERE id = :puntoId AND usuario = :usuario;
+
+limpiarPuntosPorUsuario:
+DELETE FROM punto_acopio WHERE usuario = :usuario;
+
+-- Consultas de Pesajes
+obtenerPesajesPorPunto:
+SELECT * FROM pesaje
+WHERE punto_id = :puntoId AND (usuario_sesion = :usuario OR :usuario = '')
+ORDER BY fecha_hora DESC;
+
+obtenerTodosLosPesajes:
+SELECT * FROM pesaje
+ORDER BY fecha_hora DESC;
+
+obtenerPesajesPendientes:
+SELECT * FROM pesaje
+WHERE pendiente = 1 AND usuario_sesion = :usuario
+ORDER BY id DESC;
+
+contarPesajesPendientes:
+SELECT COUNT(*) FROM pesaje
+WHERE pendiente = 1 AND usuario_sesion = :usuario;
+
+obtenerSiguienteIdProvisional:
+SELECT COALESCE(MIN(id), 0) - 1
+FROM pesaje
+WHERE id <= 0;
+
+insertarPesaje:
+INSERT INTO pesaje (
+    id, punto_id, fecha_hora, material, peso_bruto, tara, peso_neto,
+    operario, estado_tipo, motivo_anulacion, pendiente, client_operation_id, ruta_id, usuario_sesion
+) VALUES (
+    :id, :puntoId, :fechaHora, :material, :pesoBruto, :tara, :pesoNeto,
+    :operario, :estadoTipo, :motivoAnulacion, :pendiente, :clientOperationId, :rutaId, :usuarioSesion
+);
+
+insertarOReemplazarPesaje:
+INSERT OR REPLACE INTO pesaje (
+    id, punto_id, fecha_hora, material, peso_bruto, tara, peso_neto,
+    operario, estado_tipo, motivo_anulacion, pendiente, client_operation_id, ruta_id, usuario_sesion
+) VALUES (
+    :id, :puntoId, :fechaHora, :material, :pesoBruto, :tara, :pesoNeto,
+    :operario, :estadoTipo, :motivoAnulacion, :pendiente, :clientOperationId, :rutaId, :usuarioSesion
+);
+
+actualizarPesajeLocal:
+UPDATE pesaje
+SET material = :material, peso_bruto = :pesoBruto, tara = :tara, peso_neto = :pesoNeto,
+    pendiente = 1
+WHERE id = :id;
+
+actualizarIdDefinitivo:
+UPDATE pesaje
+SET id = :nuevoId, peso_neto = :pesoNetoDefinitivo, pendiente = 0
+WHERE id = :idProvisional;
+
+marcarPesajeAnuladoLocal:
+UPDATE pesaje
+SET estado_tipo = 'ANULADO', motivo_anulacion = :motivo
+WHERE id = :id;
+
+eliminarPesajesPorUsuario:
+DELETE FROM pesaje WHERE usuario_sesion = :usuario;
+
+-- Metadatos de sincronización
+obtenerMetadato:
+SELECT valor FROM metadatos_sincronizacion WHERE clave = :clave;
+
+guardarMetadato:
+INSERT OR REPLACE INTO metadatos_sincronizacion (clave, valor)
+VALUES (:clave, :valor);
+
+limpiarMetadatos:
+DELETE FROM metadatos_sincronizacion;
