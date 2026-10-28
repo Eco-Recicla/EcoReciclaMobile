@@ -1,0 +1,27 @@
+.gradle
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+*.iml
+.idea
+local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# SQLite / SQLDelight databases generated locally
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+
+# Android Keystore / credentials
+*.jks
+*.keystore
+*.key
+google-services.json
